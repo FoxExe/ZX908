@@ -1,7 +1,7 @@
 from machine import I2C
 
 
-RECV_SIZE = 128
+RECV_SIZE = 32
 ADDR = bytearray([0x00])
 ADDR_SIZE = len(ADDR)
 HEX_STRING = "0123456789ABCDEF"
@@ -30,7 +30,7 @@ if __name__ == '__main__':
 
 	if readed:
 		print("=" * 48)
-		print("Answer to %02x:" % ADDR)
+		print("Received from 0x" + "".join("%02x" % x for x in ADDR) + ":")
 		for k, v in readed.items():
 			print(k, end=": ")
 			for b in v:
