@@ -174,7 +174,6 @@ class socket(object):
         10	TIME_WAIT	The remote socket is closed and the local socket is waiting to be closed. That is, the four-way wavehand FIN, ACK, FIN, and ACK are complete. The TCP connection is disconnected after 2MSL time.
         """
 
-
 def getaddrinfo(host: str, port: int):
     """Parses the domain name of DNS.
 

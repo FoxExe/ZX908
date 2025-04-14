@@ -365,7 +365,7 @@ class I2C(object):
         FAST_MODE ：1 - Fast mode
         """
 
-    def read(self, slaveaddress, addr, addr_len, r_data, datalen, delay):
+    def read(self, slaveaddress, addr,addr_len, r_data, datalen, delay):
         """This method reads data to I2C bus.
 
         :param slaveaddress: Integer type. I2C device address.
@@ -410,7 +410,7 @@ class I2C_simulation(object):
         :param CLK: Integer type. Frequency of I2C. Range: [1, 1000000 Hz].
         """
 
-    def read(self, slaveaddress, addr, addr_len, r_data, datalen, delay):
+    def read(self, slaveaddress, addr,addr_len, r_data, datalen, delay):
         """This method reads data to I2C bus.
 
         :param slaveaddress: Integer type. I2C device address.
@@ -511,6 +511,7 @@ class SoftSPI(object):
     This class provides bus protocol of Serial Peripheral Interface (SPI).
     EC600E/EC800E module supports this feature.
     """
+
 
     def __init__(
             self,
