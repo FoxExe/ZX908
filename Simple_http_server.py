@@ -8,6 +8,8 @@ import utime
 import sys
 import uos
 import log
+import ure
+import unzip
 from uio import FileIO, BytesIO
 
 """
@@ -19,7 +21,7 @@ __version__ = "0.6"
 BIND_ADDR = "192.168.43.1"
 BIND_PORT = 80
 
-SERVER_STRING = "MicroHTTPServer v1.0"
+SERVER_STRING = "MicroHTTPServer v" + __version__
 
 SOCKET_READ_CHUNK_SIZE = 64
 
@@ -51,6 +53,19 @@ HTTP_CODE_404 = (404, "Not Found")
 HTTP_CODE_500 = (500, "Internal Server Error")
 
 
+CONTENT_TYPES = {
+	"json": "application/json",
+	"js": "application/javascript",
+	"html": "text/html; charset=utf-8",
+	"txt": "text/plain",
+	"css": "text/css",
+	"bin": "application/octet-stream",
+	"jpg": "image/jpeg",
+	"png": "image/png",
+	"svg": "image/svg+xml",
+}
+
+
 class Request:
 	# Request from client
 	def __init__(self, client_socket: usocket.socket, client_addr: str, client_port: int):
@@ -60,12 +75,8 @@ class Request:
 
 		self.headers: dict[str, str] = {}
 		data = b''
-		while True:
-			chunk = self.sock.recv(SOCKET_READ_CHUNK_SIZE)
-			if not chunk:
-				break
+		while chunk := self.sock.recv(SOCKET_READ_CHUNK_SIZE):
 			data += chunk
-
 			if b"\r\n\r\n" in data:
 				break
 
@@ -96,15 +107,12 @@ class Request:
 	def json(self):
 		return ujson.loads(b''.join(self.read_body()))
 
-	def close(self):
-		self.sock.close()
-
 
 class Response:
-	def __init__(self, req: Request, code: int = 200, headers: dict = {}, content: bytes = b''):
+	def __init__(self, req: Request, code: int = 200, headers: dict = {}):
 		self.req = req
 		self.response_code = code
-		self.content = content
+		self.content = b''
 		self.headers = headers
 		self.headers["Server"] = SERVER_STRING
 
@@ -123,6 +131,7 @@ class Response:
 	@json.setter
 	def json(self, value: dict):
 		self.content = ujson.dumps(value).encode()
+		self.headers["Content-Type"] = CONTENT_TYPES["json"]
 
 	@property
 	def response_text(self):
@@ -132,11 +141,11 @@ class Response:
 		raise ValueError("Unsupported HTTP code %d" % self.response_code)
 
 	def header_bytes(self):
-		header = ('HTTP/1.1 %d %s' % (self.response_code, self.response_text)).encode()
+		header = 'HTTP/1.1 %d %s\r\n' % (self.response_code, self.response_text)
 		for k, v in self.headers.items():
-			header += ("%s: %s\r\n" % (k, v)).encode()
-		header += b"\r\n"  # Header end newline
-		return header
+			header += "%s: %s\r\n" % (k, v)
+		header += "\r\n"
+		return header.encode()
 
 	def send(self):
 		self.headers["Content-Length"] = len(self.content)
@@ -155,52 +164,53 @@ class HTTP_Server:
 	def __init__(self):
 		self.log = log.getLogger(__name__)
 		self.sock = usocket.socket(usocket.AF_INET, usocket.SOCK_STREAM)
-		self._public_paths = {}
-		self._hidden_paths = {}
+		self._paths: list[tuple[ure.ure, callable]] = []
 
-	def listen(self, address: str, port: int):
+	def run(self, address: str, port: int, web_root: str = "/", backlog: int = 1):
+		self.web_root = web_root
 		self.sock.bind((address, port))
-		self.sock.listen(3)
+		self.sock.listen(backlog)
 		self.log.info("Server listening on %s:%s", address, port)
 		while True:
 			conn, addr, port = self.sock.accept()
 			_thread.start_new_thread(self._client_handler, (conn, addr, port))
 
-	def add_path(self, path: str, name: str, callback, hidden: bool = False):
-		if hidden:
-			self._hidden_paths[path] = (name, callback)
-		else:
-			self._public_paths[path] = (name, callback)
+	def add_handler(self, regex_path: str, callback):
+		"""Will run `callback(req: Request, matched: ure.Match)`"""
+		self._paths.append((ure.compile(regex_path), callback))
 
 	def _client_handler(self, client: usocket.socket, addr: str, port: int):
 		req = Request(client, addr, port)
 
 		self.log.info("%s:%d -> %s %s", addr, port, req.method, req.path)
-		self.log.debug("".join(["\t%s: %s\n" % (k, v) for k, v in req.headers.items()]))
+		self.log.debug("Headers:\n" + "".join(["\t%s: %s\n" % (k, v) for k, v in req.headers.items()]))
 
-		if req.path.endswith("/"):
-			path = req.path[:-1]
-		else:
-			path = req.path
+		fullpath = self.path_join(self.web_root, req.path)
+		if fullpath.endswith("/"):
+			fullpath = fullpath[:-1]
+
+		for r, fn in self._paths:
+			if g := r.match(req.path):
+				fn(req, g)
+				return
 
 		if req.method == "GET":
-			if p := self._public_paths.get(path) or self._hidden_paths.get(path):
-				_, fn = p
-				fn(self, req)
-			elif not self.is_exists(path):
-				self.send_error(req, 404, "File not found")
-			else:
-				if self.is_dir(path):
-					self.response_dir_listing(req, path)
+			if self.is_exists(fullpath):
+				if self.is_dir(fullpath):
+					if self.is_exists(fullpath + "/index.html.gz"):
+						self.send_file(req, fullpath + "/index.html.gz")
+					else:
+						self.send_dir_index(req, fullpath)
 				else:
-					# if requested + ".gz" is exists - send it instead of original (uncompressed) file
-					# Send ofly if accept-encoding contains "gzip"
-					self.send_file(req, path)
+					# TODO
+					# Add support for compressed files (for style.css.gz / index.html.gz and etc. Save some space!)
+					self.send_file(req, fullpath)
+			elif self.is_exists(fullpath + ".gz"):
+				# Requested file not found, but we have compressed version
+				self.send_file(req, fullpath + ".gz")
+			else:
+				self.send_error(req, 404, "Requested path is not found!")
 		elif req.method == "POST":
-			# TODO
-			# Check publick endpoints
-			# Check private endpoints
-			# Check if headers contains file_name/file_size, if requested path is a folder - save file intro this folder.
 			pass
 
 	def is_dir(self, path: str):
@@ -216,6 +226,13 @@ class HTTP_Server:
 			return False
 		return True
 
+	def path_join(self, a: str, b: str):
+		if a.endswith("/"):
+			a = a[:-1]
+		if b.startswith("/"):
+			b = b[1:]
+		return a + "/" + b
+
 	def get_parent_dir(self, path: str):
 		if path.endswith("/"):
 			path = path[:-1]
@@ -224,7 +241,7 @@ class HTTP_Server:
 			path = "/" + path
 		return path
 
-	def response_dir_listing(self, req: Request, path: str):
+	def send_dir_index(self, req: Request, path: str):
 		body = "<h2>Hello, %s:%s!</h2>\n" % (req.addr, req.port)
 		body += "<table>\n"
 		body += "\t<tr><td>Name</td><td>Size</td></tr>\n"
@@ -253,26 +270,34 @@ class HTTP_Server:
 
 		body += "</table>\n"
 
-		self.send_html(req, TPL_HTML_BODY, title="Index of " + path, body=body)
-
-	def send(self, req: Request, code: int, content_type: str, body: bytes):
-		resp = Response(req, code, {"Content-Type": content_type}, body)
-		resp.send()
-
-	def send_html(self, req: Request, template: str, **kwargs):
-		resp = Response(req, 200, {"Content-Type": "text/html; charset=utf-8"}, template % kwargs)
+		resp = Response(req, 200, {"Content-Type": CONTENT_TYPES["html"]})
+		resp.text = TPL_HTML_BODY % {
+			"title": "Index of " + path,
+			"body": body,
+		}
 		resp.send()
 
 	def send_error(self, req: Request, code: int, message: str):
-		body = TPL_HTML_BODY % {
+		resp = Response(req, code, {"Content-Type": CONTENT_TYPES["html"]})
+		resp.text = TPL_HTML_BODY % {
 			"title": "HTTP Error %s" % code,
 			"body": "<center><h1>HTTP Error %d: %s</h1></center>" % (code, message),
 		}
-		resp = Response(req, code, {"Content-Type": "text/html; charset=utf-8"}, body)
 		resp.send()
 
 	def send_file(self, req: Request, path: str):
-		resp = Response(req, 200, {"Content-Type": "application/octet-stream"})
+		ext = path.lower().split(".")
+		if len(ext) > 2 and ext[-1] == "gz":
+			fe = ext[-2]
+			compressed = True
+		else:
+			fe = ext[-1]
+			compressed = False
+		headers = {"Content-Type": CONTENT_TYPES.get(fe, CONTENT_TYPES["bin"])}
+		if compressed:
+			headers["Content-Encoding"] = "gzip"
+
+		resp = Response(req, 200, headers)
 		size = uos.stat(path)[6]
 		with open(path, 'rb') as f:
 			resp.send_stream(f, size, 1024)
@@ -286,36 +311,47 @@ if __name__ == "__main__":
 
 	log.basicConfig(log.DEBUG)
 
-	def print_uname(server: HTTP_Server, req: Request):
-		html = "<a href=\"/\">Go back</a><br>\n"
-		html += "<hr>\n"
-		html += "<ul>\n"
+	def print_uname(req: Request, _):
+		body = "<a href=\"/\">Go back</a><br>\n"
+		body += "<hr>\n"
+		body += "<ul>\n"
 		for line in uos.uname():
-			html += "\t<li><b>%s</b>: %s</li>\n" % tuple(line.split("=", 1))
-		html += "</ul>"
+			body += "\t<li><b>%s</b>: %s</li>\n" % tuple(line.split("=", 1))
+		body += "</ul>"
 
-		body = TPL_HTML_BODY % {
+		resp = Response(req, 200, {"Content-Type": CONTENT_TYPES["html"]})
+		resp.text = TPL_HTML_BODY % {
 			"title": "About this board",
-			"body": html,
+			"body": body,
 		}
-		server.send_html(req, TPL_HTML_BODY, title="System info", body=body)
+		resp.send()
 
-	def turn_off(server: HTTP_Server, req: Request):
-		server.send_html(req, TPL_HTML_BODY, title="Power control", body="Shutting down...")
+	def turn_off(req: Request, _):
+		resp = Response(req, 200, {"Content-Type": CONTENT_TYPES["html"]})
+		resp.json = {"success": True}
+		resp.send()
 		utime.sleep(1)
 		Power.powerDown()
 
-	def led_red_on(server: HTTP_Server, req: Request):
-		Pin(Pin.GPIO15, Pin.OUT, Pin.PULL_DISABLE, 1)
-		server.send_html(req, TPL_HTML_BODY, title="Led control", body="<b>DONE!</b> <a href=\"/\">Go back</a>")
+	def led_control(req: Request, matched: ure.Match):
+		LED_PIN = {
+			"red": Pin.GPIO15,
+			"blue": Pin.GPIO16,
+			"yellow": Pin.GPIO17,
+		}
+		LED_STATE = {
+			"off": 0,
+			"on": 1,
+		}
 
-	def led_red_off(server: HTTP_Server, req: Request):
-		Pin(Pin.GPIO15, Pin.OUT, Pin.PULL_DISABLE, 0)
-		server.send_html(req, TPL_HTML_BODY, title="Led control", body="<b>DONE!</b> <a href=\"/\">Go back</a>")
+		Pin(LED_PIN.get(matched.group(1), LED_PIN[0]), Pin.OUT, Pin.PULL_DISABLE, LED_STATE.get(matched.group(2), 1))
+
+		resp = Response(req, 200, {"Content-Type": CONTENT_TYPES["html"]})
+		resp.json = {"success": True}
+		resp.send()
 
 	server = HTTP_Server()
-	server.add_path("/uname", "Run uname()", print_uname)
-	server.add_path("/poweroff", "Shutdown device", turn_off)
-	server.add_path("/led/red/on", "Turn on RED led", led_red_on)
-	server.add_path("/led/red/off", "Turn off RED led", led_red_off)
-	server.listen(BIND_ADDR, BIND_PORT)
+	server.add_handler(r"/uname", print_uname)
+	server.add_handler(r"/poweroff", turn_off)
+	server.add_handler(r"/led/(red|yellow|blue)/(on|off)", led_control)
+	server.run(BIND_ADDR, BIND_PORT, "/usr/web/", 1)

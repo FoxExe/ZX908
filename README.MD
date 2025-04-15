@@ -4,6 +4,8 @@
 
 -   **Main chip**: Quectel EC800N-CN (LA)
 -   **System**: MicroPython v.1.13.0 (mPY: 10245, Python v3.4.0, QPY v0006)
+-   **mPY RAM**: 512256 bytes
+-   **mPY ROM**: ~576KB in /usr/ plus ~100KB in /bak
 
 ## Links
 
@@ -18,6 +20,10 @@
 
 -   [EC800N_QuecPython_v0004](Firmware/QPY_OCPU_V0004_EC800N_CNLA_FW.bin)
 -   [EC800N_QuecPython_v0006](Firmware/QPY_OCPU_V0006_EC800N_CNLA_FW.bin)
+
+### WEB Interface
+
+-   Based on [Bootstrap 5](https://getbootstrap.com/docs/5.2/about/overview/) and [HTMX JS](https://htmx.org/)
 
 ## GPIO
 
