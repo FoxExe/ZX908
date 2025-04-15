@@ -98,7 +98,7 @@ def statvfs(path: str) -> tuple:
     f_namemax – The maximum length of the file. Unit: byte.
     """
 
-def uname() -> tuple:
+def uname() -> tuple[str]:
     """Gets the information of the underlying system or its operating system.
 
     :return: The form of the return value of this interface differs from that of the official Micropython interface. This interface returns a tuple with the form of:
