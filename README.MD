@@ -6,6 +6,7 @@
 -   **System**: MicroPython v.1.13.0 (mPY: 10245, Python v3.4.0, QPY v0006)
 -   **mPY RAM**: 512256 bytes
 -   **mPY ROM**: ~576KB in /usr/ plus ~100KB in /bak
+-   **GPS Chip**: AT6558 (GPS/Glonass/Beidou/Galileo/QZSS/SBAS) (UART, 10Hz position update)
 
 ## Links
 

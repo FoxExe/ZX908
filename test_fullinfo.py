@@ -52,3 +52,6 @@ for i in range(3):
 		print(NETWORKS[i], cell)
 print("Current network type: %s. Roaming: %s" % net.getConfig())
 print("SEL: %s, MCC: %s, MNC: %s, ACT: %s" % net.getNetMode())
+
+
+help('modules')
