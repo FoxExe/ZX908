@@ -83,7 +83,7 @@ In this mode tracker will send POST JSON to server:
 -   **mPY ROM**: ~576KB in /usr/ plus ~100KB in /bak
 -   **GPS Chip**: AT6558 [Datasheet](docs/at6558.pdf)
 -   Microphone is preset, but there is no voiceCall class in firmware, so we can't accept or make calls
--   Power button connected to unknown PGIO pin. Can't use it in firmware.
+-   Power button connected to dedicated power IC. Short press - poweron, long press (10+ seconds) - poweroff.
 -   Reset button just reset power of device.
 -   i2c0 have two devices on address: 0x62 and 0xE2. Can't understand, what is it. Maybe its i2c interface of GPS module (there is no info in datasheet)
 
