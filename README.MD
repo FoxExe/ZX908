@@ -1,14 +1,91 @@
 # ZX908
 
-## Hardware
+## Features
+
+### Core Features
+
+-   ✅ GPS tracking with AT6558 module
+-   ✅ WiFi-based location fallback
+-   ✅ Automatic sleep mode on inactivity
+-   ✅ Battery monitoring with accurate percentage calculation
+-   ✅ SMS command configuration
+-   ✅ Voice call support
+-   ✅ LED status indicators
+-   ✅ Data buffering during connection loss
+
+### LED Indicators
+
+-   **Red**: GPS status
+    -   On: GPS locked
+    -   Off: GPS disabled
+    -   Blinking: Searching satellites
+-   **Blue**: Network status
+    -   Off: No server configured / No internet
+    -   Blinking: Connecting to server
+    -   Pulse: Data transmission
+-   **Yellow**: Battery status
+    -   On: Normal operation
+    -   Blinking slow: Charging
+    -   Blinking fast: Low battery (<20%)
+    -   Blinking very slow: Sleep mode
+
+# HTTP Protocol
+
+In this mode tracker will send POST JSON to server:
+
+```json
+{
+	"imei": "123456789012345",
+	"timestamp": 1234567890,
+	"latitude": 55.751244,
+	"longitude": 37.618423,
+	"altitude": 156.0,
+	"speed": 45.5,
+	"course": 180.0,
+	"satellites": 12,
+	"battery": 85,
+	"charging": false,
+	"source": "gps",
+	"accuracy": 0
+}
+```
+
+### SMS Commands
+
+| SMS (example)                                    | Explain                                            |
+| ------------------------------------------------ | -------------------------------------------------- |
+| `APN,internet,username,password`                 | Configure mobile internet (APN)                    |
+| `SERVER,GT06,tracker.example.com:5023`           | Configure GT06 server or ~                         |
+| `SERVER,HTTP,https://example.com:8080/api/track` | Configure HTTP server                              |
+| `WIFISERVER,location.example.com:80,/api/locate` | Configure alternative WiFi GeoLocation Server      |
+| `ADDNUMBER,+1234567890`                          | Add phone number for restrict configuration access |
+| `DELNUMBER,+1234567890`                          | Remove allowed phone number                        |
+| `ADDCALL,+1234567890`                            | Add phone number, allowed for auto-answer calls    |
+| `DELCALL,+1234567890`                            | Remove number                                      |
+| `INTERVAL,10`                                    | Set data send interval (1-600 seconds)             |
+| `SLEEP,30`                                       | Set inactivity timeout / Sleep mode (Minutes)      |
+| `STATUS`                                         | Request current status                             |
+| `POWEROFF`                                       | Poweroff device                                    |
+
+## Notes
+
+-   First SMS from any number becomes the primary number
+-   If no allowed numbers configured, all numbers are allowed
+-   If no call numbers configured, no calls will be accepted
+-   All commands are case-insensitive
+-   Invalid commands will receive error response
+
+# Techical info:
+
+### Hardware
 
 -   **Main chip**: Quectel EC800N-CN (LA)
 -   **System**: MicroPython v.1.13.0 (mPY: 10245, Python v3.4.0, QPY v0006)
 -   **mPY RAM**: 512256 bytes
 -   **mPY ROM**: ~576KB in /usr/ plus ~100KB in /bak
--   **GPS Chip**: AT6558 (GPS/Glonass/Beidou/Galileo/QZSS/SBAS) (UART, 10Hz position update)
+-   **GPS Chip**: AT6558 [Datasheet](docs/at6558.pdf)
 
-## Links
+### Links
 
 -   Official module page [Chinese](https://python.quectel.com/modules-cat/ec800n-series)
 -   Official docs/firmware/software [Chinese](https://python.quectel.com/resource-download?pid=146&cid=6)
@@ -22,11 +99,7 @@
 -   [EC800N_QuecPython_v0004](Firmware/QPY_OCPU_V0004_EC800N_CNLA_FW.bin)
 -   [EC800N_QuecPython_v0006](Firmware/QPY_OCPU_V0006_EC800N_CNLA_FW.bin)
 
-### WEB Interface
-
--   Based on [Bootstrap 5](https://getbootstrap.com/docs/5.2/about/overview/) and [HTMX JS](https://htmx.org/)
-
-## GPIO
+### GPIO
 
 | GPIO   | Pin | Function 1          | Function 2 | Notes         |
 | ------ | --- | ------------------- | ---------- | ------------- |
@@ -69,4 +142,7 @@
 | GPIO37 | 78  | LCD_TE              | PWM1       |
 |        | 79  |                     | PWM0       |
 
+### Images
+
 ![ZX908 Board](Images/ZX908.jpg)
+![AT6558](Images/chips_gps.jpg)
