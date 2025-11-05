@@ -1,7 +1,9 @@
 import usocket
 import ustruct
 import utime
-from led_controller import Led
+import modem
+
+from usr.led_controller import Led
 
 
 class GT06Protocol:
@@ -22,7 +24,6 @@ class GT06Protocol:
 		self.serial_number = 1
 
 		# Get device IMEI
-		import modem
 		self.imei = modem.getDevImei()
 
 		print('GT06 protocol initialized: {}:{}, IMEI: {}'.format(host, port, self.imei))

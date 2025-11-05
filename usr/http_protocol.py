@@ -1,6 +1,8 @@
 import usocket
 import ujson
-from led_controller import Led
+import modem
+
+from usr.led_controller import Led
 
 
 class HTTPProtocol:
@@ -14,7 +16,7 @@ class HTTPProtocol:
 		self.connected = False
 
 		# Get device IMEI
-		import modem
+
 		self.imei = modem.getDevImei()
 
 		print('HTTP protocol initialized: {}:{}{}'.format(host, port, path))

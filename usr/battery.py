@@ -1,4 +1,4 @@
-from misc import Power
+from misc import Power, USB
 
 
 # Voltage to percentage lookup table (in volts)
@@ -15,6 +15,7 @@ class BatteryMonitor:
 	"""Battery monitoring with accurate percentage calculation"""
 
 	def __init__(self):
+		self.usb = USB()
 		self.percent = 100
 		self.is_charging = False
 		self.voltage = 0.0
@@ -23,13 +24,13 @@ class BatteryMonitor:
 		"""Update battery status"""
 		try:
 			# Get battery voltage (in mV)
-			voltage_mv = Power.getBatteryVol()
+			voltage_mv = Power.getVbatt()
 			if voltage_mv:
 				self.voltage = voltage_mv / 1000.0  # Convert to volts
 				self.percent = self._calculate_percentage(self.voltage)
 
 			# Check charging status
-			charge_status = Power.getChargeStatus()
+			charge_status = self.usb.getStatus()
 			self.is_charging = (charge_status == 1)
 
 			return True

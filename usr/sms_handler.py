@@ -1,4 +1,4 @@
-import sim
+from misc import Power
 import sms
 
 
@@ -73,7 +73,7 @@ class SMSHandler:
 				self._cmd_apn(phone, params)
 			elif command == 'SERVER':
 				self._cmd_server(phone, params)
-			elif command == 'WIFISERVER':  # New command for WiFi location server
+			elif command == 'WIFISERVER':
 				self._cmd_wifi_server(phone, params)
 			elif command == 'ADDNUMBER':
 				self._cmd_add_number(phone, params)
@@ -89,6 +89,8 @@ class SMSHandler:
 				self._cmd_sleep(phone, params)
 			elif command == 'STATUS':
 				self._cmd_status(phone, params)
+			elif command == 'VOLUME':  # New command for call volume
+				self._cmd_volume(phone, params)
 			elif command == 'POWEROFF':
 				self._cmd_poweroff(phone, params)
 			else:
@@ -96,6 +98,48 @@ class SMSHandler:
 		except Exception as e:
 			print('Command processing error:', e)
 			self._send_sms(phone, 'Error: ' + str(e))
+
+	def _cmd_poweroff(self, phone, params):
+		"""Poweroff device"""
+		print("Poweroff initiated...")
+		Power.powerDown()
+
+	def _cmd_volume(self, phone, params):
+		"""Set call volume - VOLUME,level (0-11)"""
+		if len(params) >= 1:
+			try:
+				volume = int(params[0])
+				if self.callback:
+					success = self.callback('set_volume', volume)
+					if success:
+						self._send_sms(phone, 'Volume set: {}'.format(volume))
+					else:
+						self._send_sms(phone, 'Failed to set volume')
+			except ValueError:
+				self._send_sms(phone, 'Invalid volume value (0-11)')
+		else:
+			# Get current volume
+			if self.callback:
+				volume = self.callback('get_volume')
+				if volume >= 0:
+					self._send_sms(phone, 'Current volume: {}'.format(volume))
+
+	def _cmd_channel(self, phone, params):
+		"""Set audio channel - CHANNEL,channel (0=handset,1=headset,2=loudspeaker)"""
+		if len(params) >= 1:
+			try:
+				channel = int(params[0])
+				if self.callback:
+					success = self.callback('set_channel', channel)
+					channel_names = {0: 'handset', 1: 'headset', 2: 'loudspeaker'}
+					if success:
+						self._send_sms(phone, 'Channel: {}'.format(channel_names.get(channel, 'unknown')))
+					else:
+						self._send_sms(phone, 'Failed to set channel')
+			except ValueError:
+				self._send_sms(phone, 'Invalid channel (0/1/2)')
+		else:
+			self._send_sms(phone, 'Usage: CHANNEL,0/1/2 (0=handset,1=headset,2=loudspeaker)')
 
 	def _cmd_wifi_server(self, phone, params):
 		"""Set WiFi location server - WIFISERVER,host[:port][,path]"""

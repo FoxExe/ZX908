@@ -16,14 +16,6 @@ class WiFiLocation:
 			'port': 443,
 			'path': '/v1/geolocate?key=test',
 			'ssl': True
-		},
-		{
-			'name': 'Unwired Labs',
-			'host': 'us1.unwiredlabs.com',
-			'port': 443,
-			'path': '/v2/process.php',
-			'ssl': True,
-			'requires_key': True
 		}
 	]
 
@@ -144,9 +136,6 @@ class WiFiLocation:
 
 		# Try default services
 		for service in self.DEFAULT_SERVICES:
-			if service.get('requires_key') and not hasattr(self, 'api_key'):
-				continue
-
 			try:
 				location = self._query_service(wifi_list, service)
 				if location:
@@ -226,8 +215,7 @@ class WiFiLocation:
 						lng = result['location'].get('lng', 0)
 						accuracy = result.get('accuracy', 0)
 
-						print('WiFi location found: lat={}, lng={}, accuracy={}m'.format(
-							lat, lng, accuracy))
+						print('WiFi location found: lat={}, lng={}, accuracy={}m'.format(lat, lng, accuracy))
 
 						return {
 							'valid': True,

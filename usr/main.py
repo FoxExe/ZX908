@@ -9,18 +9,17 @@ import checkNet
 import modem
 
 # Import tracker modules
-from config import Config
-from led_controller import Leds, Led
-from gps_controller import GPSController
-from wifi_location import WiFiLocation
-from battery import BatteryMonitor
-from sms_handler import SMSHandler
-from call_handler import CallHandler
-from data_buffer import DataBuffer
+from usr.config import Config
+from usr.led_controller import Leds, Led
+from usr.gps_controller import GPSController
+from usr.wifi_location import WiFiLocation
+from usr.battery import BatteryMonitor
+from usr.sms_handler import SMSHandler
+from usr.data_buffer import DataBuffer
 
 # Import protocols
-from gt06_protocol import GT06Protocol
-from http_protocol import HTTPProtocol
+from usr.gt06_protocol import GT06Protocol
+from usr.http_protocol import HTTPProtocol
 
 
 class GPSTracker:
@@ -54,7 +53,6 @@ class GPSTracker:
 
 		# Initialize SMS and call handlers
 		self.sms_handler = SMSHandler(self.config, self._config_callback)
-		self.call_handler = CallHandler(self.config)
 
 		# Data buffer
 		self.data_buffer = DataBuffer()
@@ -104,7 +102,7 @@ class GPSTracker:
 			self.protocol = None
 			print('Server not configured')
 
-	def _config_callback(self, event):
+	def _config_callback(self, event, *args):
 		"""Callback on configuration change"""
 		if event in ['apn_changed', 'server_changed']:
 			print('Configuration changed, reinitializing...')
@@ -178,7 +176,6 @@ class GPSTracker:
 		update_interval = self.config.get('update_interval', 10)
 		last_update = 0
 		gps_wait_time = 0
-		max_gps_wait = 60  # Wait max 60 seconds for GPS before trying WiFi
 
 		while self.running:
 			try:

@@ -1,13 +1,16 @@
-from machine import Pin
-import utime
+from machine import Pin, RTC, UART
 from gnss import GnssGetData
-from machine import RTC
+import utime
+
+
+GPS_PORT = UART.UART2
+ENABLE_PIN = Pin.GPIO10
 
 
 class GPSController:
 	"""GPS controller with power management and RTC sync"""
 
-	def __init__(self, power_pin=10):
+	def __init__(self, power_pin=ENABLE_PIN):
 		self.power_pin = Pin(power_pin, Pin.OUT, Pin.PULL_DISABLE, 0)
 		self.gnss = None
 		self.enabled = False
@@ -21,7 +24,7 @@ class GPSController:
 
 			try:
 				# Initialize GNSS
-				self.gnss = GnssGetData(2, 9600, 8, 0, 1, 0)  # UART2, 9600 baud
+				self.gnss = GnssGetData(GPS_PORT, 9600, 8, 0, 1, 0)  # UART2, 9600 baud
 				self.enabled = True
 				print('GPS enabled')
 			except Exception as e:
@@ -47,71 +50,28 @@ class GPSController:
 
 	def get_location(self):
 		"""Get current location data"""
-		if not self.gnss:
+		if not self.gnss or not self.gnss.isFix():
 			return None
 
 		try:
 			# Get location data from GNSS module
-			loc_data = self.gnss.read_gnss_data()
-
-			if loc_data:
-				# Sync RTC with GPS time if not done yet
-				if not self.rtc_synced and loc_data[1]:  # Check if time is valid
-					self._sync_rtc(loc_data)
-
-				return self._parse_location(loc_data)
-
+			if self.gnss.read_gnss_data() > 0:
+				# (longitude, lon_direction, latitude, lat_direction) or -1
+				longitude, lon_direction, latitude, lat_direction = self.gnss.getLocation()
+				return {
+					'valid': self.gnss.checkDataValidity() == (1, 1, 1),  # (gga_valid, rmc_valid, gsv_valid)
+					'timestamp': utime.time(),
+					'latitude': latitude,
+					'longitude': longitude,
+					'altitude': self.gnss.getAltitude(),  # In docs its "getGeodeticHeight", but not in firmware.
+					'speed': self.gnss.getSpeed(),  # km/h
+					'course': self.gnss.getCourse(),
+					'satellites': self.gnss.getUsedSateCnt()  # getUsedSateCnt / getViewSateCnt
+				}
 			return None
 		except Exception as e:
 			print('Get location error:', e)
 			return None
-
-	def _parse_location(self, loc_data):
-		"""Parse location data from GNSS module"""
-		try:
-			# loc_data format varies, adapt based on actual GnssGetData output
-			# Typically: [fix_status, utc_time, latitude, longitude, altitude, speed, course, satellites]
-
-			return {
-				'valid': loc_data[0] if len(loc_data) > 0 else False,
-				'timestamp': loc_data[1] if len(loc_data) > 1 else '',
-				'latitude': float(loc_data[2]) if len(loc_data) > 2 else 0.0,
-				'longitude': float(loc_data[3]) if len(loc_data) > 3 else 0.0,
-				'altitude': float(loc_data[4]) if len(loc_data) > 4 else 0.0,
-				'speed': float(loc_data[5]) if len(loc_data) > 5 else 0.0,
-				'course': float(loc_data[6]) if len(loc_data) > 6 else 0.0,
-				'satellites': int(loc_data[7]) if len(loc_data) > 7 else 0
-			}
-		except Exception as e:
-			print('Parse location error:', e)
-			return None
-
-	def _sync_rtc(self, loc_data):
-		"""Sync RTC with GPS time"""
-		try:
-			# Parse GPS time (format: HHMMSS.SSS)
-			if len(loc_data) > 1 and loc_data[1]:
-				gps_time = str(loc_data[1])
-
-				# Parse time components
-				hour = int(gps_time[0:2])
-				minute = int(gps_time[2:4])
-				second = int(gps_time[4:6])
-
-				# Get date from GPS (this might be in a different field)
-				# Assuming date is available in the GNSS data
-				year = 2024  # Default or parse from GPS
-				month = 1
-				day = 1
-
-				# Set RTC
-				rtc = RTC()
-				rtc.datetime((year, month, day, 0, hour, minute, second, 0))
-
-				self.rtc_synced = True
-				print('RTC synced with GPS time:', hour, minute, second)
-		except Exception as e:
-			print('RTC sync error:', e)
 
 	def is_valid(self):
 		"""Check if GPS data is valid"""

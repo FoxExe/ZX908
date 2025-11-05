@@ -60,8 +60,6 @@ In this mode tracker will send POST JSON to server:
 | `WIFISERVER,location.example.com:80,/api/locate` | Configure alternative WiFi GeoLocation Server      |
 | `ADDNUMBER,+1234567890`                          | Add phone number for restrict configuration access |
 | `DELNUMBER,+1234567890`                          | Remove allowed phone number                        |
-| `ADDCALL,+1234567890`                            | Add phone number, allowed for auto-answer calls    |
-| `DELCALL,+1234567890`                            | Remove number                                      |
 | `INTERVAL,10`                                    | Set data send interval (1-600 seconds)             |
 | `SLEEP,30`                                       | Set inactivity timeout / Sleep mode (Minutes)      |
 | `STATUS`                                         | Request current status                             |
@@ -84,6 +82,10 @@ In this mode tracker will send POST JSON to server:
 -   **mPY RAM**: 512256 bytes
 -   **mPY ROM**: ~576KB in /usr/ plus ~100KB in /bak
 -   **GPS Chip**: AT6558 [Datasheet](docs/at6558.pdf)
+-   Microphone is preset, but there is no voiceCall class in firmware, so we can't accept or make calls
+-   Power button connected to unknown PGIO pin. Can't use it in firmware.
+-   Reset button just reset power of device.
+-   i2c0 have two devices on address: 0x62 and 0xE2. Can't understand, what is it. Maybe its i2c interface of GPS module (there is no info in datasheet)
 
 ### Links
 
