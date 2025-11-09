@@ -40,5 +40,4 @@ class DataBuffer:
 		free = gc.mem_free()
 		total = gc.mem_free() + gc.mem_alloc()
 		free_percent = (free / total) * 100
-
 		return free_percent >= self.max_memory_percent
