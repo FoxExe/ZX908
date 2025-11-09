@@ -1,4 +1,3 @@
-from curses.ascii import isdigit
 from machine import Pin, UART
 import utime
 import _thread
@@ -10,7 +9,7 @@ class GPSController:
 	"""GPS controller using GNSS module"""
 
 	def __init__(self, gnss_port, gnss_power_pin):
-		self.gnss = GNSS(gnss_port, 0, 0, 0, 1, 115200)
+		self.gnss = GNSS(gnss_port, 9600, 8, 0, 1, 0)
 		self.power_pin = Pin(gnss_power_pin, Pin.OUT, Pin.PULL_DISABLE, 0)
 		self.enabled = False
 		self.last_sync_time = 0
@@ -43,10 +42,12 @@ class GPSController:
 
 	def get_course(self):
 		rmc_data = self.gnss.getRMC()
-		if rmc_data != -1 and rmc_data[2] == "A" and isdigit(rmc_data[7]):
-			return int(rmc_data[7])
-		else:
-			return 0
+		if rmc_data != -1 and rmc_data[2] == "A":
+			try:
+				return int(rmc_data[7])
+			except ValueError:
+				pass
+		return 0
 
 	def get_accuracy(self):
 		data = self.gnss.getGGA()
@@ -114,7 +115,8 @@ class GPSController:
 		if not self.enabled:
 			return None
 		try:
-			if not self.isFix():
+			ret = self.gnss.readAndParse()
+			if ret == 0 or not self.isFix():
 				return {'valid': False}
 
 			lat, lat_dir, lon, lon_dir = self.gnss.getLocation()
