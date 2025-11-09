@@ -44,7 +44,7 @@ if __name__ == '__main__':
 		print("SAT: %d of %d. MODE: %s" % (
 			gnss.getUsedSateCnt(),
 			gnss.getViewSateCnt(),
-			GNSS_LOCATION_MODE[gnss.getLocationMode()]
+			GNSS_LOCATION_MODE[gnss.getLocationMode()],
 		))
 
 		rmc_data = gnss.getRMC()
@@ -55,11 +55,16 @@ if __name__ == '__main__':
 			time = (int(rmc_data[1][0:2]), int(rmc_data[1][2:4]), int(rmc_data[1][4:6]))
 			datetime = "%02d.%02d.%d" % date + " %02d:%02d:%02d" % time
 
-			print("[%s] Speed: %s, Course: %s, Coordinates: %s" % (
+			lat, lat_dir, lon, lon_dir = gnss.getLocation()
+			print("[%s] Speed: %s, Course: %s, LAT: %3.06f, LON: %3.06f, ACC: %s, ALT: %s" % (
 				datetime,
 				gnss.getSpeed(),
 				rmc_data[7],
-				gnss.getLocation()))
+				float(lat),
+				float(lon),
+				rmc_data[8],
+				gnss.getAltitude()
+			))
 
 		gsv_data = gnss.getGSV()
 		if gsv_data != -1:
