@@ -1,5 +1,9 @@
 # ZX908
 
+# WARNING: Work in progress!
+
+### This code contains many errors and still in development state!
+
 ## Features
 
 ### Core Features
@@ -13,21 +17,9 @@
 -   ✅ LED status indicators
 -   ✅ Data buffering during connection loss
 
-### LED Indicators
+## Downloads
 
--   **Red**: GPS status
-    -   On: GPS locked
-    -   Off: GPS disabled
-    -   Blinking: Searching satellites
--   **Blue**: Network status
-    -   Off: No server configured / No internet
-    -   Blinking: Connecting to server
-    -   Pulse: Data transmission
--   **Yellow**: Battery status
-    -   On: Normal operation
-    -   Blinking slow: Charging
-    -   Blinking fast: Low battery (<20%)
-    -   Blinking very slow: Sleep mode
+-   [Alpha version (WIP)](Firmware/Tracker_fw_alpha.bin)
 
 # HTTP Protocol
 
@@ -54,24 +46,45 @@ In this mode tracker will send POST JSON to server:
 
 | SMS (example)                                    | Explain                                            |
 | ------------------------------------------------ | -------------------------------------------------- |
-| `APN,internet,username,password`                 | Configure mobile internet (APN)                    |
+| `APN,internet.mts.ru,mts,mts`                    | Configure mobile internet (APN)                    |
 | `SERVER,GT06,tracker.example.com:5023`           | Configure GT06 server or ~                         |
 | `SERVER,HTTP,https://example.com:8080/api/track` | Configure HTTP server                              |
-| `WIFISERVER,location.example.com:80,/api/locate` | Configure alternative WiFi GeoLocation Server      |
+| `WIFISERVER,location.example.com:80,/api/locate` | Configure WiFi Location Server (Optional)          |
+| `WIFIENABLE,1`                                   | Enable/Disable WiFi Location                       |
 | `ADDNUMBER,+1234567890`                          | Add phone number for restrict configuration access |
 | `DELNUMBER,+1234567890`                          | Remove allowed phone number                        |
 | `INTERVAL,10`                                    | Set data send interval (1-600 seconds)             |
 | `SLEEP,30`                                       | Set inactivity timeout / Sleep mode (Minutes)      |
 | `STATUS`                                         | Request current status                             |
 | `POWEROFF`                                       | Poweroff device                                    |
+| `RESET,123456789012345`                          | Reset settings (IMEI as password)                  |
 
-## Notes
+### Notes
 
 -   First SMS from any number becomes the primary number
 -   If no allowed numbers configured, all numbers are allowed
 -   If no call numbers configured, no calls will be accepted
 -   All commands are case-insensitive
 -   Invalid commands will receive error response
+-   RESET command works from any number but requires IMEI
+-   WiFi location is optional and disabled by default
+-   WiFi networks are sent to server when GPS is unavailable
+
+### LED Indicators
+
+-   **Red**: GPS status
+    -   On: GPS locked
+    -   Off: GPS disabled
+    -   Blinking: Searching satellites
+-   **Blue**: Network status
+    -   Off: No server configured / No internet
+    -   Blinking: Connecting to server
+    -   Pulse: Data transmission
+-   **Yellow**: Battery status
+    -   On: Normal operation
+    -   Blinking slow: Charging
+    -   Blinking fast: Low battery (<20%)
+    -   Blinking very slow: Sleep mode
 
 # Techical info:
 
@@ -95,9 +108,6 @@ In this mode tracker will send POST JSON to server:
 -   [QuecPython on GitHub](https://github.com/QuecPython)
 -   [QPYcom v3.6.0 (Windows)](https://python.quectel.com/en/wp-content/uploads/sites/2/2024/11/QPYcom_V3.6.0.zip)
 -   [USB Drivers (Windows)](https://python.quectel.com/wp-content/uploads/2024/09/Quectel_Windows_USB_DriverA_Customer_V1.1.13.zip)
-
-### Firmware
-
 -   [EC800N_QuecPython_v0004](Firmware/QPY_OCPU_V0004_EC800N_CNLA_FW.bin)
 -   [EC800N_QuecPython_v0006](Firmware/QPY_OCPU_V0006_EC800N_CNLA_FW.bin)
 
